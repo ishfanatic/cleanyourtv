@@ -17,6 +17,13 @@
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen"
         android:allowBackup="false">
 
+        <!-- The next prayer for the Clean Your TV launcher's game_day panel (docs/modules.md). -->
+        <meta-data android:name="com.gathin.tvhome.games" android:value="com.majnioui.tv.prayer.next" />
+        <provider
+            android:name=".NextPrayerProvider"
+            android:authorities="com.majnioui.tv.prayer.next"
+            android:exported="true" />
+
         <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -41,6 +48,20 @@
             android:noHistory="true" />
 
         <receiver android:name=".PrayerReceiver" android:exported="false" />
+
+        <!-- Back to standby after an adhan woke the TV (wake_standby_minutes); off until the person enables it. -->
+        <service
+            android:name=".StandbyService"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/standby_service" />
+        </service>
 
         <receiver
             android:name=".BootReceiver"

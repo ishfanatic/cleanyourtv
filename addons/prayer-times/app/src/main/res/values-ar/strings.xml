@@ -19,4 +19,13 @@
     <string name="loading">جارٍ التحميل…</string>
     <string name="offline">تعذر الاتصال بـ Aladhan. جارٍ عرض آخر أوقات محفوظة إن وجدت.</string>
     <string name="unexpected_error">استجابة غير متوقعة من Aladhan.</string>
+    <string name="prayer_jumuah">الجمعة</string>
+    <string name="iqamah">الإقامة</string>
+    <string name="suhoor_ends">ينتهي السحور</string>
+    <string name="iftar">الإفطار</string>
+    <string name="prayer_soon">%1$s بعد %2$d دقيقة</string>
+    <string name="kahf_title">جمعة مباركة</string>
+    <string name="kahf_body">اقرأ سورة الكهف اليوم</string>
+    <string name="standby_in">وضع الاستعداد بعد %1$d:%2$02d · اضغط أي زر للبقاء</string>
+    <string name="standby_service">يسمح لتطبيق أوقات الصلاة بإعادة التلفاز إلى وضع الاستعداد بعد أن يوقظه الأذان ولم يضغط أحد أي زر. لا يقرأ أي شيء على الشاشة.</string>
 </resources>

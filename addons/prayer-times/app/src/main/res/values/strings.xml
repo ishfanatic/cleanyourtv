@@ -19,4 +19,23 @@
     <string name="loading">Loading…</string>
     <string name="offline">Can’t reach Aladhan. Showing the last times, if any.</string>
     <string name="unexpected_error">Unexpected answer from Aladhan.</string>
+    <!-- The dua after the adhan, narrated by Jabir ibn Abdullah: Sahih al-Bukhari 614. -->
+    <string name="dua_title" translatable="false">Dua after the adhan · الدعاء بعد الأذان</string>
+    <string name="dua_arabic" translatable="false">اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ، وَالصَّلَاةِ الْقَائِمَةِ، آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ، وَابْعَثْهُ مَقَامًا مَحْمُودًا الَّذِي وَعَدْتَهُ</string>
+    <string name="dua_english" translatable="false">O Allah, Lord of this perfect call and of the prayer about to be established, grant Muhammad al-Wasīlah and excellence, and raise him to the praised station that You have promised him.</string>
+    <string name="dua_source" translatable="false">Ṣaḥīḥ al-Bukhārī 614</string>
+    <string name="prayer_jumuah">Jumuʿah</string>
+    <string name="iqamah">Iqamah</string>
+    <string name="suhoor_ends">Suhoor ends</string>
+    <string name="iftar">Iftar</string>
+    <string name="prayer_soon">%1$s in %2$d min</string>
+    <string name="kahf_title">Jumuʿah Mubārak</string>
+    <string name="kahf_body">Read Sūrat al-Kahf today</string>
+    <string name="standby_in">Standby in %1$d:%2$02d · press any button to stay on</string>
+    <string name="standby_service">Lets Prayer Times put the TV back to standby after an adhan woke it and nobody pressed a button. It reads nothing on screen.</string>
+    <!-- The dua for breaking the fast, narrated by Ibn Umar: Sunan Abi Dawud 2357 (graded hasan). -->
+    <string name="dua_iftar_title" translatable="false">Dua for breaking the fast · دعاء الإفطار</string>
+    <string name="dua_iftar_arabic" translatable="false">ذَهَبَ الظَّمَأُ، وَابْتَلَّتِ الْعُرُوقُ، وَثَبَتَ الْأَجْرُ إِنْ شَاءَ اللَّهُ</string>
+    <string name="dua_iftar_english" translatable="false">The thirst has gone, the veins are moistened, and the reward is certain, if Allah wills.</string>
+    <string name="dua_iftar_source" translatable="false">Sunan Abī Dāwūd 2357</string>
 </resources>

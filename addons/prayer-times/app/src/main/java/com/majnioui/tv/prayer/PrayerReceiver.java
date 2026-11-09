@@ -12,11 +12,17 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.PowerManager;
 import android.util.Log;
+
+import java.io.File;
+import java.util.Arrays;
 
 public class PrayerReceiver extends BroadcastReceiver {
     private static final String TAG = "PrayerReceiver";
     private static final String CHANNEL_ID = "prayer_reminder";
+    // The adhan is the sound, so its notification is silent; a channel's sound cannot change once created.
+    private static final String CHANNEL_QUIET_ID = "prayer_reminder_quiet";
     private static final int NOTIFICATION_ID = 1001;
 
     @Override
@@ -35,16 +41,53 @@ public class PrayerReceiver extends BroadcastReceiver {
             return;
         }
 
+        // The quiet cards: a prayer coming up (heads_up_minutes), Surat al-Kahf on Fridays (kahf_time). Only while
+        // the TV is on; they never wake it and make no sound.
+        boolean headsUp = PrayerScheduler.ACTION_HEADS_UP.equals(action);
+        if (headsUp || PrayerScheduler.ACTION_KAHF.equals(action)) {
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if (pm != null && pm.isInteractive()) {
+                Intent card = new Intent(context, PrayerAlertActivity.class);
+                card.putExtras(intent);
+                card.putExtra(PrayerScheduler.EXTRA_KIND, headsUp ? PrayerScheduler.KIND_HEADS_UP : PrayerScheduler.KIND_KAHF);
+                String rawTime = intent.getStringExtra(PrayerScheduler.EXTRA_PRAYER_TIME);
+                card.putExtra(PrayerScheduler.EXTRA_PRAYER_TIME, rawTime == null ? "" : PrayerScheduler.clock(context, rawTime));
+                card.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                try {
+                    context.startActivity(card);
+                } catch (Exception e) {
+                    Log.w(TAG, "Launch card error: " + e);
+                }
+            }
+            return;
+        }
+
         if (PrayerScheduler.ACTION_PRAYER_ALARM.equals(action)) {
             String name = intent.getStringExtra(PrayerScheduler.EXTRA_PRAYER_NAME);
             String time = intent.getStringExtra(PrayerScheduler.EXTRA_PRAYER_TIME);
             String place = intent.getStringExtra(PrayerScheduler.EXTRA_PLACE);
             if (name == null) name = "Fajr";
             if (time == null) time = "";
+            time = PrayerScheduler.clock(context, time);
             if (place == null) place = context.getString(R.string.place);
 
             int idx = PrayerScheduler.getPrayerIndex(name);
-            String localizedName = idx >= 0 ? context.getString(PrayerScheduler.NAME_RES[idx]) : name;
+            String localizedName = idx >= 0 ? PrayerScheduler.displayName(context, idx) : name;
+
+            // TV in standby: only the prayers listed in adhan_wake turn it on; the rest pass quietly.
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            boolean asleep = pm != null && !pm.isInteractive();
+            boolean wake = asleep && Arrays.asList(context.getString(R.string.adhan_wake).split("\\s*,\\s*")).contains(name);
+            if (asleep && !wake) {
+                Log.i(TAG, name + " while the TV is off and not in adhan_wake: nothing shown");
+                PrayerScheduler.scheduleNext(context);
+                return;
+            }
+            if (wake) {
+                // Keep the TV awake until the card's activity turns the screen on.
+                pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "prayer:adhan").acquire(30_000);
+            }
+            String adhanPath = adhanFile(context, name);
 
             // 1. Post High-Priority Notification (handles sound and tray indicator with fixed ID)
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -66,6 +109,14 @@ public class PrayerReceiver extends BroadcastReceiver {
                             .build();
                     ch.setSound(soundUri, audioAttributes);
                     nm.createNotificationChannel(ch);
+
+                    NotificationChannel quiet = new NotificationChannel(
+                            CHANNEL_QUIET_ID,
+                            context.getString(R.string.app_name),
+                            NotificationManager.IMPORTANCE_HIGH
+                    );
+                    quiet.setSound(null, null);
+                    nm.createNotificationChannel(quiet);
                 }
 
                 Intent mainIntent = new Intent(context, MainActivity.class);
@@ -79,7 +130,7 @@ public class PrayerReceiver extends BroadcastReceiver {
 
                 Notification.Builder nb;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    nb = new Notification.Builder(context, CHANNEL_ID);
+                    nb = new Notification.Builder(context, adhanPath != null ? CHANNEL_QUIET_ID : CHANNEL_ID);
                 } else {
                     nb = new Notification.Builder(context);
                 }
@@ -105,6 +156,9 @@ public class PrayerReceiver extends BroadcastReceiver {
                 popup.putExtra(PrayerScheduler.EXTRA_PRAYER_NAME, name);
                 popup.putExtra(PrayerScheduler.EXTRA_PRAYER_TIME, time);
                 popup.putExtra(PrayerScheduler.EXTRA_PLACE, place);
+                popup.putExtra(PrayerScheduler.EXTRA_ADHAN, adhanPath);
+                popup.putExtra(PrayerScheduler.EXTRA_WAKE, wake);
+                popup.putExtra(PrayerScheduler.EXTRA_IFTAR, idx == 4 && PrayerScheduler.ramadan(context));
                 popup.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
                 context.startActivity(popup);
             } catch (Exception e) {
@@ -114,5 +168,19 @@ public class PrayerReceiver extends BroadcastReceiver {
             // 3. Schedule next prayer
             PrayerScheduler.scheduleNext(context);
         }
+    }
+
+    /**
+     * The adhan to play for this prayer, or null for the chime: adhan_<prayer>.mp3 (adhan_fajr.mp3,
+     * adhan_dhuhr.mp3...) if there is one, else adhan.mp3, in the app's own folder on the TV
+     * (/sdcard/Android/data/com.majnioui.tv.prayer/files/), so a recording can change without a rebuild.
+     */
+    static String adhanFile(Context context, String name) {
+        if (!context.getResources().getBoolean(R.bool.adhan)) return null;
+        File dir = context.getExternalFilesDir(null);
+        if (dir == null) return null;
+        File own = new File(dir, "adhan_" + name.toLowerCase(java.util.Locale.ROOT) + ".mp3");
+        File f = own.canRead() ? own : new File(dir, "adhan.mp3");
+        return f.canRead() ? f.getAbsolutePath() : null;
     }
 }

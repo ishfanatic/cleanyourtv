@@ -12,4 +12,38 @@
     <color name="accent">#2BB673</color>
     <!-- Show an on-screen alert card when a prayer time arrives. Off by default. -->
     <bool name="reminders">false</bool>
+    <!-- With reminders on, play an adhan with the card: adhan_fajr.mp3, adhan_dhuhr.mp3, adhan_asr.mp3,
+         adhan_maghrib.mp3, adhan_isha.mp3 (or one adhan.mp3 for any prayer without its own), pushed to
+         /sdcard/Android/data/com.majnioui.tv.prayer/files/. Without a file the chime plays as before. -->
+    <bool name="adhan">false</bool>
+    <!-- Prayers that turn the TV on from standby for the adhan, comma-separated (Fajr, Dhuhr, Asr, Maghrib,
+         Isha); empty never wakes it. The others only play when the TV is already on. -->
+    <string name="adhan_wake" translatable="false"></string>
+    <!-- Media volume (0-100 on most TVs) for an adhan that woke the TV; the person's own level comes back after
+         the dua. -1 keeps whatever the volume was. -->
+    <integer name="adhan_wake_volume">-1</integer>
+    <!-- After the adhan, show the dua for after the adhan (Sahih al-Bukhari 614) with its translation; recited
+         too if dua_ar and dua_en (.mp3 or .m4a) are in the same folder as the adhan files. -->
+    <bool name="adhan_dua">true</bool>
+    <!-- Volume (0-100) for the Fajr adhan when the TV is already on; -1 keeps the current volume. -->
+    <integer name="fajr_volume">-1</integer>
+    <!-- After an adhan woke the TV, put it back to standby this many minutes after the dua unless a button is
+         pressed; 0 never does. Needs the add-on's standby accessibility service switched on. -->
+    <integer name="wake_standby_minutes">0</integer>
+    <!-- Minutes from each adhan to the iqamah, for Fajr, Dhuhr, Asr, Maghrib and Isha (e.g. 20,15,15,5,15);
+         empty turns the iqamah countdown off. -->
+    <string name="iqamah_minutes" translatable="false"></string>
+    <!-- A quiet card this many minutes before each prayer while the TV is on; 0 turns it off. -->
+    <integer name="heads_up_minutes">0</integer>
+    <!-- Fridays: the Jumu'ah time (24-hour HH:mm, e.g. 13:30) shown and announced instead of the calculated
+         Dhuhr; empty keeps Dhuhr's time under the name Jumu'ah. -->
+    <string name="jumuah_time" translatable="false"></string>
+    <!-- Fridays: a card reminding to read Surat al-Kahf at this time (24-hour HH:mm) while the TV is on; empty
+         turns it off. -->
+    <string name="kahf_time" translatable="false"></string>
+    <!-- Ramadan: "Suhoor ends" before Fajr, "Iftar" before Maghrib and the iftar dua after the Maghrib adhan.
+         auto follows Aladhan's Hijri month, on and off force it. -->
+    <string name="ramadan" translatable="false">off</string>
+    <!-- The launcher's Home line (game_day): today's Hijri date in place of the city name. -->
+    <bool name="home_hijri">false</bool>
 </resources>

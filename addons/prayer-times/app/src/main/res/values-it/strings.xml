@@ -19,4 +19,13 @@
     <string name="loading">Caricamento…</string>
     <string name="offline">Impossibile raggiungere Aladhan. Mostro gli ultimi orari, se ci sono.</string>
     <string name="unexpected_error">Risposta inattesa da Aladhan.</string>
+    <string name="prayer_jumuah">Jumuʿah</string>
+    <string name="iqamah">Iqamah</string>
+    <string name="suhoor_ends">Fine del suhoor</string>
+    <string name="iftar">Iftar</string>
+    <string name="prayer_soon">%1$s tra %2$d min</string>
+    <string name="kahf_title">Jumuʿah Mubārak</string>
+    <string name="kahf_body">Leggi oggi la Sura al-Kahf</string>
+    <string name="standby_in">Standby tra %1$d:%2$02d · premi un tasto per restare acceso</string>
+    <string name="standby_service">Permette a Orari di preghiera di rimettere il TV in standby dopo che l’adhan lo ha acceso e nessuno ha premuto un tasto. Non legge nulla sullo schermo.</string>
 </resources>

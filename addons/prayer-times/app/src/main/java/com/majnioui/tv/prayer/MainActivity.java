@@ -7,6 +7,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.RelativeSizeSpan;
 import android.content.res.ColorStateList;
 import android.util.Log;
 import android.util.TypedValue;
@@ -58,6 +61,9 @@ public class MainActivity extends Activity {
     private String[] times;
     /** The calculation method's name as Aladhan gives it, for the status line. */
     private String methodName = "";
+    /** Today's Hijri date as Aladhan gives it, and its month number (9 is Ramadan). */
+    private String hijri = "";
+    private int hijriMonth;
     /** The day the times are for (yyyy-MM-dd), to reload after midnight. */
     private String loadedFor;
     private boolean loading;
@@ -153,11 +159,9 @@ public class MainActivity extends Activity {
                 try {
                     parse(result.getJSONObject("data"));
                     loadedFor = day;
-                    if (getResources().getBoolean(R.bool.reminders)) {
-                        PrayerScheduler.saveTimingsAndSchedule(MainActivity.this, day, NAMES, times, minutes, getString(R.string.place));
-                    } else {
-                        PrayerScheduler.cancel(MainActivity.this);
-                    }
+                    // Saved even with reminders off: the launcher's Home line reads them (NextPrayerProvider).
+                    PrayerScheduler.saveTimingsAndSchedule(MainActivity.this, day, NAMES, times, minutes,
+                            getString(R.string.place), hijri, hijriMonth);
                     render();
                 } catch (Exception e) {
                     Log.w(TAG, "parse: " + e);
@@ -178,31 +182,30 @@ public class MainActivity extends Activity {
             s[i] = v;
             m[i] = Integer.parseInt(v.substring(0, 2)) * 60 + Integer.parseInt(v.substring(3, 5));
         }
+        PrayerScheduler.adjustForFriday(this, s, m);
         minutes = m;
         times = s;
         JSONObject meta = data.optJSONObject("meta");
         JSONObject method = meta != null ? meta.optJSONObject("method") : null;
         methodName = method != null ? method.optString("name", "") : "";
-        JSONObject date = data.getJSONObject("date");
-        JSONObject hijri = date.getJSONObject("hijri");
-        dates.setText(new SimpleDateFormat("EEEE d MMMM", Locale.ENGLISH).format(new Date()) + "  ·  "
-                + hijri.getString("day") + " " + hijri.getJSONObject("month").getString("en") + " "
-                + hijri.getString("year") + " AH");
+        hijri = PrayerScheduler.hijriText(data);
+        hijriMonth = PrayerScheduler.hijriMonth(data);
+        String line = new SimpleDateFormat("EEEE d MMMM", Locale.ENGLISH).format(new Date()) + "  ·  " + hijri;
+        if (PrayerScheduler.isFriday()) line += "  ·  " + getString(R.string.kahf_title);
+        dates.setText(line);
     }
 
     private void render() {
         if (minutes == null) return;
         Calendar c = Calendar.getInstance();
         int now = c.get(Calendar.HOUR_OF_DAY) * 60 + c.get(Calendar.MINUTE);
-        int nextIdx = -1;
-        for (int i = 0; i < NAMES.length; i++) {
-            if (i == 1) continue;   // sunrise is shown but is not a prayer
-            if (minutes[i] > now) { nextIdx = i; break; }
-        }
-        if (nextIdx >= 0) {
-            int left = minutes[nextIdx] - now;
+        // The prayer, its iqamah, or Suhoor's end and Iftar in Ramadan (PrayerScheduler.upcoming).
+        PrayerScheduler.Upcoming up = PrayerScheduler.upcoming(this, minutes, now);
+        int nextIdx = up == null ? -1 : up.index;   // during the iqamah wait, the prayer just called stays lit
+        if (up != null) {
+            int left = up.atMinute - now;
             String timeStr = (left >= 60 ? left / 60 + " h " : "") + left % 60 + " min";
-            next.setText(getString(R.string.prayer_in, getString(NAME_RES[nextIdx]), timeStr));
+            next.setText(getString(R.string.prayer_in, up.label, timeStr));
         } else {
             next.setText(getString(R.string.prayer_tomorrow, getString(NAME_RES[0])));
         }
@@ -227,15 +230,15 @@ public class MainActivity extends Activity {
             ilp.bottomMargin = dp(22);
             card.addView(icon, ilp);
             TextView ar = centered(text(26, 400, fg));
-            ar.setText(ARABIC[i]);
+            ar.setText(PrayerScheduler.displayArabic(i));
             card.addView(ar);
             TextView name = centered(text(20, 500, hl ? 0xE6FFFFFF : (i == 1 ? 0x80FFFFFF : 0xB3FFFFFF)));
-            name.setText(getString(NAME_RES[i]));
+            name.setText(PrayerScheduler.displayName(this, i));
             name.setPadding(0, dp(8), 0, dp(20));
             card.addView(name);
             TextView time = centered(text(42, hl ? 500 : 300, fg));
-            time.setText(times[i]);
-            // Shrink rather than cut "05:10" when the card is narrow.
+            time.setText(smallSuffix(PrayerScheduler.clock(this, times[i])));
+            // Shrink rather than cut "5:10 AM" when the card is narrow.
             time.setMaxLines(1);
             time.setAutoSizeTextTypeUniformWithConfiguration(20, 42, 1, TypedValue.COMPLEX_UNIT_SP);
             card.addView(time, new LinearLayout.LayoutParams(-1, dp(52)));
@@ -244,7 +247,7 @@ public class MainActivity extends Activity {
             rows.addView(card, lp);
         }
         boolean reminders = getResources().getBoolean(R.bool.reminders);
-        String updated = getString(R.string.updated_at, new SimpleDateFormat("HH:mm", Locale.ROOT).format(new Date()));
+        String updated = getString(R.string.updated_at, android.text.format.DateFormat.getTimeFormat(this).format(new Date()));
         String statusStr = "Aladhan" + (methodName.isEmpty() ? "" : " · " + methodName) + " · " + updated;
         if (reminders) {
             statusStr += " · " + getString(R.string.reminders_active);
@@ -264,6 +267,15 @@ public class MainActivity extends Activity {
         } finally {
             c.disconnect();
         }
+    }
+
+    /** "5:37 PM" with the AM/PM at under half size, so the hour keeps the tile's large type; "17:37" stays as is. */
+    private static CharSequence smallSuffix(String clock) {
+        int space = clock.lastIndexOf(' ');
+        if (space < 0) return clock;
+        SpannableString s = new SpannableString(clock);
+        s.setSpan(new RelativeSizeSpan(0.4f), space, clock.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return s;
     }
 
     /** Centred on its own line, whatever the script direction. */
